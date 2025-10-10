@@ -1,41 +1,49 @@
 import os
 import soundfile as sf
-from datasets import load_dataset
+from datasets import load_dataset, Audio
 
 # --- Configuration ---
-# 1. CHANGE THIS PATH to the folder you created in Step 1.
+# 1. Make sure this path points to your output folder.
 output_folder = r"C:\Users\ShwethaSharan T\Desktop\MY PROJECTS\Blue Fish\Blue-Fish\marine_input"
 
 # 2. Name of the Hugging Face dataset
 repo_id = "ardavey/marine_ocean_mammal_sound"
 # --- End of Configuration ---
 
-print("➡️ Loading Hugging Face dataset...")
-dataset = load_dataset(repo_id)
+print("➡️ Loading dataset metadata (using simple method)...")
+# Load the dataset but tell it NOT to decode the audio automatically
+# This is the key change that avoids the error.
+dataset = load_dataset(repo_id, trust_remote_code=True).cast_column("audio", Audio(decode=False))
 
 print("➡️ Starting export process...")
 file_counters = {}
 
-# Make sure the lines below this start with 4 spaces
 for item in dataset['train']:
-    audio_data = item['audio']
-    species_label = item['species']
+    try:
+        # Get the path to the original audio file in the cache
+        original_audio_path = item['audio']['path']
+        species_label = item['species']
 
-    folder_name = species_label.replace(" ", "_")
-    species_folder_path = os.path.join(output_folder, folder_name)
+        # Use soundfile to directly read the original audio file
+        audio_array, sampling_rate = sf.read(original_audio_path)
 
-    os.makedirs(species_folder_path, exist_ok=True)
+        # --- The rest of the saving logic is the same ---
+        folder_name = species_label.replace(" ", "_")
+        species_folder_path = os.path.join(output_folder, folder_name)
+        os.makedirs(species_folder_path, exist_ok=True)
 
-    count = file_counters.get(folder_name, 0) + 1
-    file_counters[folder_name] = count
+        count = file_counters.get(folder_name, 0) + 1
+        file_counters[folder_name] = count
 
-    output_filename = f"{folder_name}_{count}.wav"
-    output_filepath = os.path.join(species_folder_path, output_filename)
+        output_filename = f"{folder_name}_{count}.wav"
+        output_filepath = os.path.join(species_folder_path, output_filename)
 
-    sf.write(
-        output_filepath,
-        audio_data['array'],
-        audio_data['sampling_rate']
-    )
+        # Write the audio data as a new WAV file
+        sf.write(output_filepath, audio_array, sampling_rate)
+        print(f"Successfully saved: {output_filename}")
+
+    except Exception as e:
+        print(f"Could not process a file. Error: {e}")
+
 
 print(f"\n✅ Export complete! Audio files are saved in: {output_folder}")
