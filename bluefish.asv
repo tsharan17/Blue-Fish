@@ -1,0 +1,133 @@
+% ============================================================
+% 🌊 Blue Fish - Marine Species Identification v3.0 (Enhanced)
+% ============================================================
+% Author: Sharan T
+% Description: Audio-based marine species classifier with
+%              automatic feature extraction and silence handling.
+% ============================================================
+
+function bluefish()
+    clc; close all; clear;
+    fprintf('\n🌊 Marine Species Identification v3.0 (ENHANCED)\n');
+    fprintf('===============================================================\n');
+
+    % ----- Step 1: Load dataset -----
+    datasetPath = 'C:\Users\ShwethaSharan T\Desktop\MY PROJECTS\Blue Fish\Blue-Fish\marine_input';
+    fprintf('📂 Loading dataset from: %s\n', datasetPath);
+
+    speciesFolders = dir(datasetPath);
+    speciesFolders = speciesFolders([speciesFolders.isdir] & ~ismember({speciesFolders.name}, {'.', '..'}));
+    numSpecies = numel(speciesFolders);
+
+    allFeatures = [];
+    allLabels = {};
+
+    totalFiles = 0;
+
+    % ----- Step 2: Loop through species folders -----
+    for i = 1:numSpecies
+        speciesName = speciesFolders(i).name;
+        fprintf('🔹 Processing species: %s\n', speciesName);
+        audioFiles = dir(fullfile(datasetPath, speciesName, '*.wav'));
+        
+        for j = 1:numel(audioFiles)
+            filePath = fullfile(audioFiles(j).folder, audioFiles(j).name);
+            totalFiles = totalFiles + 1;
+            
+            try
+                [audioData, fs] = audioread(filePath);
+                features = extractAllFeatures(audioData, fs);
+                
+                if isempty(features)
+                    warning('File is silent or invalid: %s', filePath);
+                    continue;
+                end
+                
+                allFeatures = [allFeatures; features];
+                allLabels{end+1} = speciesName;
+
+            catch ME
+                warning('Error processing %s: %s', filePath, ME.message);
+                continue;
+            end
+        end
+    end
+
+    fprintf('✅ Found %d audio files.\n', totalFiles);
+    fprintf('🎵 Feature extraction completed.\n');
+    fprintf('Total usable samples: %d\n', size(allFeatures, 1));
+
+    % ----- Step 3: Save extracted data -----
+    save('marine_features.mat', 'allFeatures', 'allLabels');
+    fprintf('💾 Saved features to marine_features.mat\n');
+
+    fprintf('===============================================================\n');
+    fprintf('✅ Dataset processing complete.\n\n');
+end
+
+
+% ============================================================
+%  FEATURE EXTRACTION FUNCTION
+% ============================================================
+function features = extractAllFeatures(audioData, fs)
+    % Default expected feature dimension (MFCC + spectral + temporal)
+    expectedDim = 100;
+
+    % ----- Step 1: Check for silence -----
+    if isempty(audioData) || max(abs(audioData)) < 1e-4
+        warning('File is silent after preprocessing.');
+        features = [];
+        return;
+    end
+
+    % ----- Step 2: Convert to mono & normalize -----
+    if size(audioData, 2) > 1
+        audioData = mean(audioData, 2);
+    end
+    audioData = audioData / max(abs(audioData));
+
+    % ----- Step 3: Optional noise gating -----
+    silenceThreshold = 0.001;
+    audioData(abs(audioData) < silenceThreshold) = 0;
+
+    % ----- Step 4: Feature extraction -----
+    try
+        % MFCC features
+        mfccFeat = mfcc(audioData, fs, 'NumCoeffs', 13);
+
+        % Spectral features
+        specCentroid = spectralCentroid(audioData, fs);
+        specRolloff = spectralRolloffPoint(audioData, fs);
+        specFlux = spectralFlux(audioData, fs);
+        specBandwidth = spectralBandwidth(audioData, fs);
+
+        % Temporal features
+        zcr = zerocrossrate(audioData);
+        rmsVal = rms(audioData);
+
+        % Aggregate statistics
+        featureVec = [mean(mfccFeat, 1), std(mfccFeat, [], 1), ...
+                      mean(specCentroid), mean(specRolloff), ...
+                      mean(specFlux), mean(specBandwidth), ...
+                      mean(zcr), rmsVal];
+
+    catch ME
+        warning('Feature extraction failed: %s', ME.message);
+        features = [];
+        return;
+    end
+
+    % ----- Step 5: Fix inconsistent dimensions -----
+    actualDim = length(featureVec);
+    if actualDim ~= expectedDim
+        warning('Extracted feature dim ~= %d (got %d).', expectedDim, actualDim);
+        if actualDim < expectedDim
+            featureVec(end+1:expectedDim) = 0;
+        else
+            featureVec = featureVec(1:expectedDim);
+        end
+    end
+
+    % ----- Step 6: Output -----
+    features = featureVec(:)'; % row vector
+end
