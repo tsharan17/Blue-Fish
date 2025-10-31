@@ -1,12 +1,13 @@
-% 🌊 BlueFish - Marine Acoustic Species Identification System
+% 🌊 BlueFish v3.2 - Marine Acoustic Species Identification System
 % ---------------------------------------------------------------
 % ✅ Trains on labeled subfolders of marine species audio samples
-% ✅ Lets you test a real audio file for species identification
-% ✅ Fixed prediction output issue (cell/string compatibility)
+% ✅ Tests a real audio file for species identification
+% ✅ Plays back the test audio after prediction (🔊 Added)
+% ✅ Displays spectrogram
 % ✅ Requires Audio Toolbox
 
 clc; clear; close all;
-fprintf('🌊 BlueFish v1.0 - Marine Acoustic Species Identification System\n');
+fprintf('🌊 BlueFish v3.2 - Marine Acoustic Species Identification System\n');
 fprintf('==============================================================\n');
 
 % === Step 1: Dataset Selection ===
@@ -48,7 +49,7 @@ for k = 1:numel(subfolders)
             features = [features; meanCoeffs];
             labels = [labels; string(subfolders(k).name)];
         catch ME
-            warning("⚠️ Feature extraction failed for '%s': %s", audioFiles(i).name, ME.message);
+            warning("⚠ Feature extraction failed for '%s': %s", audioFiles(i).name, ME.message);
         end
     end
 end
@@ -87,7 +88,6 @@ if strcmp(choice, 'Yes')
     % === Step 6: Predict ===
     predictedSpecies = predict(speciesClassifier, meanTest);
 
-    % Fix for cell output
     if iscell(predictedSpecies)
         predictedSpecies = predictedSpecies{1};
     end
@@ -100,6 +100,15 @@ if strcmp(choice, 'Yes')
     title(sprintf('Detected: %s', string(predictedSpecies)));
     colormap jet;
     colorbar;
+
+    % === Step 8: Play Audio (🔊 Added) ===
+    fprintf('🎵 Playing detected audio...\n');
+    sound(yTest, fsTest); % plays the test file
+
+    % Optional: wait for playback to finish before closing
+    pause(length(yTest) / fsTest);
+
+    fprintf('🪸 Audio playback complete.\n');
 end
 
-fprintf('\n🌊 BlueFish v1.0 Execution Complete!\n');
+fprintf('\n🌊 BlueFish v3.2 Execution Complete!\n');
