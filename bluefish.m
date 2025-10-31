@@ -1,4 +1,4 @@
-% 🌊 BlueFish v3.1 - Marine Acoustic Species Identification System
+% 🌊 BlueFish - Marine Acoustic Species Identification System
 % ---------------------------------------------------------------
 % ✅ Trains on labeled subfolders of marine species audio samples
 % ✅ Lets you test a real audio file for species identification
@@ -6,7 +6,7 @@
 % ✅ Requires Audio Toolbox
 
 clc; clear; close all;
-fprintf('🌊 BlueFish v3.1 - Marine Acoustic Species Identification System\n');
+fprintf('🌊 BlueFish v1.0 - Marine Acoustic Species Identification System\n');
 fprintf('==============================================================\n');
 
 % === Step 1: Dataset Selection ===
@@ -102,4 +102,4 @@ if strcmp(choice, 'Yes')
     colorbar;
 end
 
-fprintf('\n🌊 BlueFish v3.1 Execution Complete!\n');
+fprintf('\n🌊 BlueFish v1.0 Execution Complete!\n');
